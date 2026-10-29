@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Registrasi Gathering Karyawan 2026</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100dvh;
+      background: linear-gradient(160deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    /* ─── Card ───────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.4);
+      width: 100%;
+      max-width: 440px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #1a73e8, #0052cc);
+      padding: 28px 24px 22px;
+      text-align: center;
+      color: #fff;
+    }
+    .card-header .logo { font-size: 44px; margin-bottom: 6px; }
+    .card-header h1 { font-size: 20px; font-weight: 700; }
+    .card-header p  { margin-top: 5px; font-size: 13px; opacity: .85; }
+
+    .card-body { padding: 24px 20px 28px; }
+
+    /* ─── Form Group ─────────────────────────────────────────── */
+    .form-group { margin-bottom: 18px; }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #444;
+      margin-bottom: 7px;
+      letter-spacing: .2px;
+    }
+    label .req { color: #e53935; margin-left: 2px; }
+
+    select {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1.5px solid #ddd;
+      border-radius: 12px;
+      font-size: 15px;
+      color: #333;
+      background: #fff;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath fill='none' stroke='%231a73e8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' d='M1 1l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+    }
+    select:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 3px rgba(26,115,232,.15);
+    }
+    select:disabled {
+      background-color: #f5f5f5;
+      color: #bbb;
+      cursor: not-allowed;
+      border-color: #eee;
+    }
+
+    /* ─── Search nama ────────────────────────────────────────── */
+    .search-wrapper { position: relative; }
+
+    .search-input {
+      width: 100%;
+      padding: 13px 16px;
+      border: 1.5px solid #ddd;
+      border-radius: 12px;
+      font-size: 15px;
+      color: #333;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 3px rgba(26,115,232,.15);
+    }
+    .search-input:disabled {
+      background: #f5f5f5;
+      color: #bbb;
+      cursor: not-allowed;
+      border-color: #eee;
+    }
+    .search-input::placeholder { color: #bbb; }
+
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + 5px);
+      left: 0; right: 0;
+      background: #fff;
+      border: 1.5px solid #1a73e8;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.15);
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 200;
+      display: none;
+    }
+    .search-dropdown.show { display: block; }
+
+    .dropdown-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 15px;
+      color: #333;
+      border-bottom: 1px solid #f5f5f5;
+      transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:active,
+    .dropdown-item:hover { background: #f0f7ff; color: #1a73e8; }
+
+    .dropdown-empty {
+      padding: 14px;
+      text-align: center;
+      color: #aaa;
+      font-size: 14px;
+    }
+
+    /* ─── Selected indicator ─────────────────────────────────── */
+    .selected-chip {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: #e8f0fe;
+      border: 1.5px solid #1a73e8;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-top: 8px;
+    }
+    .selected-chip.show { display: flex; }
+    .selected-chip .chip-name { font-size: 14px; font-weight: 600; color: #1a73e8; flex: 1; }
+    .selected-chip .chip-clear {
+      background: none; border: none; cursor: pointer;
+      color: #888; font-size: 18px; line-height: 1; padding: 0 2px;
+    }
+    .selected-chip .chip-clear:hover { color: #e53935; }
+
+    /* ─── Submit ─────────────────────────────────────────────── */
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1a73e8, #0052cc);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: .3px;
+      margin-top: 6px;
+      transition: opacity .2s, transform .1s, box-shadow .2s;
+      box-shadow: 0 4px 16px rgba(26,115,232,.35);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-submit:hover  { opacity: .92; box-shadow: 0 6px 20px rgba(26,115,232,.45); }
+    .btn-submit:active { transform: scale(.97); }
+    .btn-submit:disabled {
+      background: linear-gradient(135deg, #b0bec5, #90a4ae);
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 1;
+    }
+
+    /* ─── Spinner ────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Result Overlay ─────────────────────────────────────── */
+    #result-panel {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 999;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+    #result-panel.show { display: flex; }
+
+    @media (min-width: 480px) {
+      #result-panel { align-items: center; padding: 20px; }
+      .result-card { border-radius: 24px !important; }
+    }
+
+    .result-card {
+      background: #fff;
+      border-radius: 24px 24px 0 0;
+      width: 100%;
+      max-width: 440px;
+      overflow: hidden;
+      animation: slideUp .4s cubic-bezier(.34,1.3,.64,1);
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .result-header {
+      padding: 32px 24px 26px;
+      text-align: center;
+      position: relative;
+    }
+    .result-header.success {
+      background: linear-gradient(135deg, #00c853, #00897b);
+    }
+    .result-header.warning {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+    }
+
+    .confetti-area { font-size: 54px; margin-bottom: 10px; }
+    .result-header h2 { color: #fff; font-size: 22px; font-weight: 800; }
+    .result-header .subtitle { color: rgba(255,255,255,.85); font-size: 13px; margin-top: 5px; }
+
+    .result-body { padding: 22px 20px 28px; }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #f8f9fa;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .info-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .info-icon.blue   { background: #e8f0fe; }
+    .info-icon.orange { background: #fff3e0; }
+    .info-label { font-size: 11px; color: #999; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+    .info-value { font-size: 15px; font-weight: 700; color: #222; margin-top: 2px; }
+
+    .kelompok-box {
+      background: linear-gradient(135deg, #1a73e8, #0052cc);
+      border-radius: 16px;
+      padding: 22px 20px;
+      text-align: center;
+      margin: 16px 0 20px;
+    }
+    .kelompok-box .kl-label { font-size: 12px; color: rgba(255,255,255,.8); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .kelompok-box .kl-name  { font-size: 30px; font-weight: 900; color: #fff; letter-spacing: .5px; }
+
+    .btn-close-result {
+      width: 100%;
+      padding: 13px;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #444;
+      cursor: pointer;
+      transition: background .2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-close-result:active { background: #e0e0e0; }
+
+    /* ─── Toast ──────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #222;
+      color: #fff;
+      padding: 11px 20px;
+      border-radius: 30px;
+      font-size: 14px;
+      white-space: nowrap;
+      box-shadow: 0 6px 20px rgba(0,0,0,.3);
+      z-index: 9999;
+      opacity: 0;
+      transition: all .3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ─── Footer ─────────────────────────────────────────────── */
+    .footer {
+      margin-top: 14px;
+      color: rgba(255,255,255,.4);
+      font-size: 11px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="card-header">
+    <div class="logo">🎉</div>
+    <h1>Gathering Karyawan 2026</h1>
+    <p>Pilih unit dan nama Anda untuk mendaftar</p>
+  </div>
+
+  <div class="card-body">
+    <form id="reg-form" autocomplete="off">
+
+      <!-- Dropdown Unit + Kota -->
+      <div class="form-group">
+        <label for="unit-select">Unit <span class="req">*</span></label>
+        <select id="unit-select">
+          <option value="">— Pilih Unit —</option>
+        </select>
+      </div>
+
+      <!-- Search + Dropdown Nama -->
+      <div class="form-group">
+        <label>Nama Karyawan <span class="req">*</span></label>
+        <div class="search-wrapper">
+          <input
+            type="text"
+            id="nama-input"
+            class="search-input"
+            placeholder="Ketik nama untuk mencari..."
+            disabled
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="words"
+            spellcheck="false"
+          />
+          <div class="search-dropdown" id="nama-dropdown"></div>
+        </div>
+        <!-- Chip saat nama dipilih -->
+        <div class="selected-chip" id="selected-chip">
+          <span class="chip-name" id="chip-name-text">—</span>
+          <button type="button" class="chip-clear" id="chip-clear" title="Ganti nama">✕</button>
+        </div>
+        <input type="hidden" id="employee-id" />
+      </div>
+
+      <button type="submit" class="btn-submit" id="submit-btn" disabled>
+        Daftar Sekarang →
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="footer">Gathering Karyawan 2026 · Pendaftaran Online</div>
+
+<!-- ─── Result Sheet ─────────────────────────────────────────── -->
+<div id="result-panel">
+  <div class="result-card">
+    <div class="result-header" id="result-header">
+      <div class="confetti-area" id="result-emoji">🎉</div>
+      <h2 id="result-title">Registrasi Berhasil!</h2>
+      <div class="subtitle" id="result-subtitle">Selamat datang di Gathering 2026</div>
+    </div>
+    <div class="result-body">
+      <div class="info-row">
+        <div class="info-icon blue">👤</div>
+        <div>
+          <div class="info-label">Nama</div>
+          <div class="info-value" id="res-nama">—</div>
+        </div>
+      </div>
+      <div class="info-row">
+        <div class="info-icon orange">🏢</div>
+        <div>
+          <div class="info-label">Unit · Kota</div>
+          <div class="info-value" id="res-unit">—</div>
+        </div>
+      </div>
+      <div class="kelompok-box">
+        <div class="kl-label">🏆 Kelompok Anda</div>
+        <div class="kl-name" id="res-kelompok">—</div>
+      </div>
+      <button class="btn-close-result" id="close-result">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let allEmployees    = [];
+  let filteredList    = [];
+  let selectedEmpId   = null;
+
+  // ─── Init ─────────────────────────────────────────────────────────────────────
+  async function init() {
+    try {
+      const res = await fetch('/api/employees');
+      allEmployees = await res.json();
+      populateUnits();
+    } catch (e) {
+      showToast('⚠️ Gagal memuat data. Coba refresh halaman.');
+    }
+  }
+
+  // ─── Populate Unit Dropdown ───────────────────────────────────────────────────
+  function populateUnits() {
+    const sel = document.getElementById('unit-select');
+    const seen = new Set();
+    const opts = [];
+    allEmployees.forEach(e => {
+      const key = `${e.unit}|${e.kota}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        opts.push({ unit: e.unit, kota: e.kota, label: `${e.unit} ${e.kota}` });
+      }
+    });
+    opts.sort((a, b) => a.label.localeCompare(b.label));
+    opts.forEach(o => {
+      const el = document.createElement('option');
+      el.value = JSON.stringify({ unit: o.unit, kota: o.kota });
+      el.textContent = o.label;
+      sel.appendChild(el);
+    });
+  }
+
+  // ─── Unit change ──────────────────────────────────────────────────────────────
+  document.getElementById('unit-select').addEventListener('change', function () {
+    clearSelection();
+    const namaInput = document.getElementById('nama-input');
+
+    if (!this.value) {
+      namaInput.disabled = true;
+      filteredList = [];
+      return;
+    }
+
+    const { unit, kota } = JSON.parse(this.value);
+    filteredList = allEmployees.filter(e => e.unit === unit && e.kota === kota);
+    namaInput.disabled = false;
+    namaInput.value = '';
+    namaInput.focus();
+    renderDropdown('');
+  });
+
+  // ─── Nama input ───────────────────────────────────────────────────────────────
+  const namaInput    = document.getElementById('nama-input');
+  const namaDropdown = document.getElementById('nama-dropdown');
+
+  namaInput.addEventListener('input', function () {
+    clearSelection(true); // clear ID tapi jangan reset input
+    renderDropdown(this.value.trim());
+  });
+
+  namaInput.addEventListener('focus', function () {
+    if (filteredList.length && !selectedEmpId) renderDropdown(this.value.trim());
+  });
+
+  // Tutup dropdown saat klik luar
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrapper')) hideDropdown();
+  });
+  document.addEventListener('touchstart', e => {
+    if (!e.target.closest('.search-wrapper')) hideDropdown();
+  }, { passive: true });
+
+  function renderDropdown(q) {
+    const query = q.toLowerCase();
+    const matches = query
+      ? filteredList.filter(e => e.nama.toLowerCase().includes(query))
+      : filteredList;
+
+    namaDropdown.innerHTML = '';
+    if (matches.length === 0) {
+      namaDropdown.innerHTML = '<div class="dropdown-empty">Nama tidak ditemukan</div>';
+    } else {
+      matches.slice(0, 50).forEach(emp => {
+        const div = document.createElement('div');
+        div.className = 'dropdown-item';
+        // Highlight query
+        if (query) {
+          const idx = emp.nama.toLowerCase().indexOf(query);
+          div.innerHTML = emp.nama.substring(0, idx)
+            + `<strong>${emp.nama.substring(idx, idx + query.length)}</strong>`
+            + emp.nama.substring(idx + query.length);
+        } else {
+          div.textContent = emp.nama;
+        }
+        div.addEventListener('mousedown', e => { e.preventDefault(); selectEmployee(emp); });
+        div.addEventListener('touchend', e => { e.preventDefault(); selectEmployee(emp); });
+        namaDropdown.appendChild(div);
+      });
+    }
+    namaDropdown.classList.add('show');
+  }
+
+  function hideDropdown() {
+    namaDropdown.classList.remove('show');
+  }
+
+  function selectEmployee(emp) {
+    selectedEmpId = emp.id;
+    document.getElementById('employee-id').value = emp.id;
+    namaInput.value = emp.nama;
+    namaInput.disabled = true;
+    hideDropdown();
+
+    // Tampilkan chip
+    document.getElementById('chip-name-text').textContent = emp.nama;
+    document.getElementById('selected-chip').classList.add('show');
+
+    updateSubmitBtn();
+  }
+
+  function clearSelection(keepInput = false) {
+    selectedEmpId = null;
+    document.getElementById('employee-id').value = '';
+    document.getElementById('selected-chip').classList.remove('show');
+    if (!keepInput) {
+      namaInput.value = '';
+      namaInput.disabled = true;
+    } else {
+      namaInput.disabled = false;
+    }
+    updateSubmitBtn();
+    hideDropdown();
+  }
+
+  // Tombol X di chip
+  document.getElementById('chip-clear').addEventListener('click', () => {
+    namaInput.disabled = false;
+    namaInput.value = '';
+    document.getElementById('selected-chip').classList.remove('show');
+    selectedEmpId = null;
+    document.getElementById('employee-id').value = '';
+    updateSubmitBtn();
+    namaInput.focus();
+    renderDropdown('');
+  });
+
+  function updateSubmitBtn() {
+    document.getElementById('submit-btn').disabled = !selectedEmpId;
+  }
+
+  // ─── Submit ───────────────────────────────────────────────────────────────────
+  document.getElementById('reg-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    if (!selectedEmpId) return;
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Memproses...';
+
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_id: selectedEmpId })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showResult(data);
+        resetForm();
+      } else {
+        showToast('❌ ' + (data.error || 'Terjadi kesalahan'));
+      }
+    } catch {
+      showToast('❌ Koneksi error, coba lagi');
+    } finally {
+      btn.innerHTML = 'Daftar Sekarang →';
+      updateSubmitBtn();
+    }
+  });
+
+  function resetForm() {
+    document.getElementById('unit-select').value = '';
+    clearSelection();
+    filteredList = [];
+  }
+
+  // ─── Result Sheet ─────────────────────────────────────────────────────────────
+  function showResult(data) {
+    const isNew = !data.already_registered;
+    const header = document.getElementById('result-header');
+    header.className = 'result-header ' + (isNew ? 'success' : 'warning');
+
+    document.getElementById('result-emoji').textContent    = isNew ? '🎉' : '✅';
+    document.getElementById('result-title').textContent    = isNew ? 'Registrasi Berhasil!' : 'Sudah Terdaftar!';
+    document.getElementById('result-subtitle').textContent = isNew
+      ? 'Selamat datang di Gathering 2026! 🙌'
+      : 'Anda sudah terdaftar sebelumnya';
+
+    document.getElementById('res-nama').textContent    = data.employee.nama;
+    document.getElementById('res-unit').textContent    = `${data.employee.unit} · ${data.employee.kota}`;
+    document.getElementById('res-kelompok').textContent = data.kelompok.nama;
+
+    document.getElementById('result-panel').classList.add('show');
+  }
+
+  document.getElementById('close-result').addEventListener('click', () => {
+    document.getElementById('result-panel').classList.remove('show');
+  });
+  document.getElementById('result-panel').addEventListener('click', e => {
+    if (e.target === document.getElementById('result-panel'))
+      document.getElementById('result-panel').classList.remove('show');
+  });
+
+  // ─── Toast ────────────────────────────────────────────────────────────────────
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  init();
+</script>
+</body>
+</html>
