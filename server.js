@@ -1,166 +1,222 @@
 'use strict';
+require('dotenv').config();
+
 const express = require('express');
+const { Pool } = require('pg');
 const path    = require('path');
-const Database = require('better-sqlite3');
 
 const app = express();
-const DB_PATH = path.join(__dirname, 'data', 'gathering.db');
 
+// ─── Database Pool ────────────────────────────────────────────────────────────
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: false }
+    : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-function getDb() {
-  return new Database(DB_PATH);
-}
+// ─── Health check ─────────────────────────────────────────────────────────────
+app.get('/api/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok' });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: e.message });
+  }
+});
 
 // ─── GET /api/employees ────────────────────────────────────────────────────────
-// Kembalikan semua nama+unit untuk dropdown
-app.get('/api/employees', (req, res) => {
-  const db = getDb();
-  const rows = db.prepare(
-    'SELECT id, nama, unit, kota FROM employees ORDER BY unit, nama'
-  ).all();
-  db.close();
-  res.json(rows);
+app.get('/api/employees', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, nama, unit, kota FROM employees ORDER BY unit, nama'
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── GET /api/units ────────────────────────────────────────────────────────────
-// Unit unik beserta kota untuk dropdown "UNIT KOTA"
-app.get('/api/units', (req, res) => {
-  const db = getDb();
-  const rows = db.prepare(
-    'SELECT DISTINCT unit, kota FROM employees ORDER BY unit, kota'
-  ).all();
-  db.close();
-  res.json(rows);
+app.get('/api/units', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT DISTINCT unit, kota FROM employees ORDER BY unit, kota'
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── GET /api/employees/by-unit ───────────────────────────────────────────────
-// Filter nama berdasarkan unit+kota yang dipilih
-app.get('/api/employees/by-unit', (req, res) => {
+app.get('/api/employees/by-unit', async (req, res) => {
   const { unit, kota } = req.query;
   if (!unit || !kota) return res.json([]);
-  const db = getDb();
-  const rows = db.prepare(
-    'SELECT id, nama FROM employees WHERE unit = ? AND kota = ? ORDER BY nama'
-  ).all(unit, kota);
-  db.close();
-  res.json(rows);
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, nama FROM employees WHERE unit = $1 AND kota = $2 ORDER BY nama',
+      [unit, kota]
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── POST /api/register ───────────────────────────────────────────────────────
-// Daftarkan karyawan & kembalikan info kelompok
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   const { employee_id } = req.body;
   if (!employee_id) return res.status(400).json({ error: 'employee_id diperlukan' });
 
-  const db = getDb();
-  const emp = db.prepare(
-    `SELECT e.*, k.nama as nama_kelompok
-     FROM employees e
-     JOIN kelompok k ON k.id = e.kelompok
-     WHERE e.id = ?`
-  ).get(employee_id);
+  try {
+    // Ambil data karyawan + kelompok
+    const empResult = await pool.query(
+      `SELECT e.*, k.nama AS nama_kelompok
+       FROM employees e
+       JOIN kelompok k ON k.id = e.kelompok_id
+       WHERE e.id = $1`,
+      [employee_id]
+    );
 
-  if (!emp) {
-    db.close();
-    return res.status(404).json({ error: 'Karyawan tidak ditemukan' });
-  }
-
-  // Cek sudah pernah registrasi
-  const existing = db.prepare(
-    'SELECT * FROM registrations WHERE employee_id = ?'
-  ).get(employee_id);
-
-  if (!existing) {
-    db.prepare(
-      "INSERT INTO registrations (employee_id, registered_at) VALUES (?, datetime('now','localtime'))"
-    ).run(employee_id);
-    // Set checked in
-    db.prepare(
-      "UPDATE employees SET checked_in = 1, checked_in_at = datetime('now','localtime') WHERE id = ?"
-    ).run(employee_id);
-  }
-
-  db.close();
-
-  res.json({
-    success: true,
-    already_registered: !!existing,
-    employee: {
-      id:    emp.id,
-      nama:  emp.nama,
-      unit:  emp.unit,
-      kota:  emp.kota,
-    },
-    kelompok: {
-      id:   emp.kelompok,
-      nama: emp.nama_kelompok,
+    if (empResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Karyawan tidak ditemukan' });
     }
-  });
+
+    const emp = empResult.rows[0];
+
+    // Cek sudah registrasi
+    const existing = await pool.query(
+      'SELECT id FROM registrations WHERE employee_id = $1',
+      [employee_id]
+    );
+
+    if (existing.rows.length === 0) {
+      await pool.query(
+        'INSERT INTO registrations (employee_id) VALUES ($1)',
+        [employee_id]
+      );
+      await pool.query(
+        'UPDATE employees SET checked_in = TRUE, checked_in_at = NOW() WHERE id = $1',
+        [employee_id]
+      );
+    }
+
+    res.json({
+      success: true,
+      already_registered: existing.rows.length > 0,
+      employee: {
+        id:   emp.id,
+        nama: emp.nama,
+        unit: emp.unit,
+        kota: emp.kota,
+      },
+      kelompok: {
+        id:   emp.kelompok_id,
+        nama: emp.nama_kelompok,
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// ─── ADMIN ROUTES ─────────────────────────────────────────────────────────────
-
-// GET /api/admin/kelompok — semua anggota per kelompok
-app.get('/api/admin/kelompok', (req, res) => {
-  const db = getDb();
-  const kelompoklist = db.prepare('SELECT * FROM kelompok ORDER BY id').all();
-  const result = kelompoklist.map(k => ({
-    ...k,
-    anggota: db.prepare(
-      'SELECT id, nama, unit, kota, checked_in, checked_in_at FROM employees WHERE kelompok = ? ORDER BY nama'
-    ).all(k.id)
-  }));
-  db.close();
-  res.json(result);
+// ─── ADMIN: GET /api/admin/kelompok ───────────────────────────────────────────
+app.get('/api/admin/kelompok', async (req, res) => {
+  try {
+    const kelompokRes = await pool.query('SELECT * FROM kelompok ORDER BY id');
+    const result = await Promise.all(
+      kelompokRes.rows.map(async (k) => {
+        const anggota = await pool.query(
+          `SELECT id, nama, unit, kota, checked_in,
+                  TO_CHAR(checked_in_at AT TIME ZONE 'Asia/Jakarta', 'DD/MM/YYYY HH24:MI') AS checked_in_at
+           FROM employees WHERE kelompok_id = $1 ORDER BY nama`,
+          [k.id]
+        );
+        return { ...k, anggota: anggota.rows };
+      })
+    );
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// PATCH /api/admin/employee/:id/kelompok — pindahkan karyawan ke kelompok lain
-app.patch('/api/admin/employee/:id/kelompok', (req, res) => {
+// ─── ADMIN: PATCH /api/admin/employee/:id/kelompok ────────────────────────────
+app.patch('/api/admin/employee/:id/kelompok', async (req, res) => {
   const { id } = req.params;
   const { kelompok_id } = req.body;
   if (!kelompok_id || kelompok_id < 1 || kelompok_id > 10) {
-    return res.status(400).json({ error: 'kelompok_id 1-10' });
+    return res.status(400).json({ error: 'kelompok_id harus 1-10' });
   }
-  const db = getDb();
-  db.prepare('UPDATE employees SET kelompok = ? WHERE id = ?').run(kelompok_id, id);
-  db.close();
-  res.json({ success: true });
+  try {
+    await pool.query('UPDATE employees SET kelompok_id = $1 WHERE id = $2', [kelompok_id, id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// PATCH /api/admin/kelompok/:id/nama — ganti nama kelompok
-app.patch('/api/admin/kelompok/:id/nama', (req, res) => {
+// ─── ADMIN: PATCH /api/admin/kelompok/:id/nama ────────────────────────────────
+app.patch('/api/admin/kelompok/:id/nama', async (req, res) => {
   const { id } = req.params;
   const { nama } = req.body;
   if (!nama) return res.status(400).json({ error: 'nama diperlukan' });
-  const db = getDb();
-  db.prepare('UPDATE kelompok SET nama = ? WHERE id = ?').run(nama, id);
-  db.close();
-  res.json({ success: true });
+  try {
+    await pool.query('UPDATE kelompok SET nama = $1 WHERE id = $2', [nama, id]);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// GET /api/admin/stats — statistik registrasi
-app.get('/api/admin/stats', (req, res) => {
-  const db = getDb();
-  const total   = db.prepare('SELECT COUNT(*) as c FROM employees').get().c;
-  const hadir   = db.prepare('SELECT COUNT(*) as c FROM employees WHERE checked_in = 1').get().c;
-  const byUnit  = db.prepare(
-    'SELECT unit, COUNT(*) as total, SUM(checked_in) as hadir FROM employees GROUP BY unit ORDER BY unit'
-  ).all();
-  const byKelompok = db.prepare(
-    `SELECT k.nama, COUNT(e.id) as total, SUM(e.checked_in) as hadir
-     FROM kelompok k LEFT JOIN employees e ON e.kelompok = k.id
-     GROUP BY k.id ORDER BY k.id`
-  ).all();
-  db.close();
-  res.json({ total, hadir, byUnit, byKelompok });
+// ─── ADMIN: GET /api/admin/stats ──────────────────────────────────────────────
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const [totalRes, hadirRes, byUnitRes, byKelompokRes] = await Promise.all([
+      pool.query('SELECT COUNT(*) AS c FROM employees'),
+      pool.query('SELECT COUNT(*) AS c FROM employees WHERE checked_in = TRUE'),
+      pool.query(
+        `SELECT unit,
+                COUNT(*) AS total,
+                SUM(CASE WHEN checked_in THEN 1 ELSE 0 END) AS hadir
+         FROM employees GROUP BY unit ORDER BY unit`
+      ),
+      pool.query(
+        `SELECT k.nama,
+                COUNT(e.id) AS total,
+                SUM(CASE WHEN e.checked_in THEN 1 ELSE 0 END) AS hadir
+         FROM kelompok k
+         LEFT JOIN employees e ON e.kelompok_id = k.id
+         GROUP BY k.id, k.nama ORDER BY k.id`
+      ),
+    ]);
+
+    res.json({
+      total:       parseInt(totalRes.rows[0].c),
+      hadir:       parseInt(hadirRes.rows[0].c),
+      byUnit:      byUnitRes.rows,
+      byKelompok:  byKelompokRes.rows,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n🎉 Gathering System berjalan di http://localhost:${PORT}`);
-  console.log(`   Admin Panel: http://localhost:${PORT}/admin.html\n`);
+  console.log(`   Admin Panel : http://localhost:${PORT}/admin.html`);
+  console.log(`   Generate QR : http://localhost:${PORT}/qrcode.html\n`);
 });
+
+module.exports = app; // diperlukan Vercel

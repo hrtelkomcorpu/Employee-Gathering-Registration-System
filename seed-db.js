@@ -1,54 +1,14 @@
-// seed-db.js — Inisialisasi database SQLite + acak kelompok awal
-const Database = require('better-sqlite3');
+// seed-db.js — Jalankan SEKALI untuk isi data ke Supabase
+// Usage: node seed-db.js
+require('dotenv').config();
+const { Pool } = require('pg');
 const employees = require('./data/employees');
-const path = require('path');
-const fs = require('fs');
 
-const DB_PATH = path.join(__dirname, 'data', 'gathering.db');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-// Hapus DB lama jika ada (fresh start)
-if (fs.existsSync(DB_PATH)) {
-  console.log('Database sudah ada, skip seeding. Hapus data/gathering.db untuk reset.');
-  process.exit(0);
-}
-
-const db = new Database(DB_PATH);
-
-// ─── Schema ───────────────────────────────────────────────────────────────────
-db.exec(`
-  CREATE TABLE IF NOT EXISTS employees (
-    id        INTEGER PRIMARY KEY AUTOINCREMENT,
-    nama      TEXT NOT NULL,
-    unit      TEXT NOT NULL,
-    kota      TEXT NOT NULL,
-    kelompok  INTEGER NOT NULL DEFAULT 0,
-    checked_in INTEGER NOT NULL DEFAULT 0,
-    checked_in_at TEXT
-  );
-
-  CREATE TABLE IF NOT EXISTS kelompok (
-    id    INTEGER PRIMARY KEY,
-    nama  TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS registrations (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    employee_id   INTEGER NOT NULL,
-    registered_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
-    FOREIGN KEY(employee_id) REFERENCES employees(id)
-  );
-`);
-
-// ─── Kelompok (10 tim) ────────────────────────────────────────────────────────
-const kelompokNames = [
-  'Kelompok 1', 'Kelompok 2', 'Kelompok 3', 'Kelompok 4', 'Kelompok 5',
-  'Kelompok 6', 'Kelompok 7', 'Kelompok 8', 'Kelompok 9', 'Kelompok 10'
-];
-
-const insertKelompok = db.prepare('INSERT OR IGNORE INTO kelompok (id, nama) VALUES (?, ?)');
-kelompokNames.forEach((nm, i) => insertKelompok.run(i + 1, nm));
-
-// ─── Masukkan karyawan + acak kelompok ────────────────────────────────────────
 // Fisher-Yates shuffle
 function shuffle(arr) {
   const a = [...arr];
@@ -59,37 +19,69 @@ function shuffle(arr) {
   return a;
 }
 
-const insertEmp = db.prepare(
-  'INSERT INTO employees (nama, unit, kota, kelompok) VALUES (?, ?, ?, ?)'
-);
+async function seed() {
+  const client = await pool.connect();
+  try {
+    console.log('🔌 Terhubung ke database...');
 
-// Bagi rata 160 orang ke 10 kelompok
-const totalEmployees = employees.length;
-const numGroups = 10;
+    // Cek apakah sudah ada data
+    const existing = await client.query('SELECT COUNT(*) FROM employees');
+    if (parseInt(existing.rows[0].count) > 0) {
+      console.log('⚠️  Data sudah ada! Hapus tabel dulu jika ingin reset.');
+      console.log('   Jalankan di Supabase SQL Editor:');
+      console.log('   TRUNCATE employees, kelompok, registrations RESTART IDENTITY CASCADE;');
+      return;
+    }
 
-// Buat array index dan shuffle
-const indices = shuffle([...Array(totalEmployees).keys()]);
+    await client.query('BEGIN');
 
-// Bagi ke kelompok secara merata
-const assignments = new Array(totalEmployees);
-indices.forEach((empIdx, i) => {
-  assignments[empIdx] = (i % numGroups) + 1;
-});
+    // ── Insert 10 kelompok ──────────────────────────────────────
+    console.log('📦 Insert kelompok...');
+    const kelompokNames = [
+      'Kelompok 1', 'Kelompok 2', 'Kelompok 3', 'Kelompok 4', 'Kelompok 5',
+      'Kelompok 6', 'Kelompok 7', 'Kelompok 8', 'Kelompok 9', 'Kelompok 10'
+    ];
+    for (const nama of kelompokNames) {
+      await client.query('INSERT INTO kelompok (nama) VALUES ($1)', [nama]);
+    }
 
-const insertMany = db.transaction(() => {
-  employees.forEach((emp, i) => {
-    insertEmp.run(emp.nama, emp.unit, emp.kota, assignments[i]);
-  });
-});
+    // ── Acak kelompok untuk tiap karyawan ──────────────────────
+    const total  = employees.length;
+    const nGroup = 10;
+    const indices = shuffle([...Array(total).keys()]);
+    const assignments = new Array(total);
+    indices.forEach((empIdx, i) => {
+      assignments[empIdx] = (i % nGroup) + 1;
+    });
 
-insertMany();
+    // ── Insert karyawan ────────────────────────────────────────
+    console.log(`👥 Insert ${total} karyawan...`);
+    for (let i = 0; i < employees.length; i++) {
+      const { nama, unit, kota } = employees[i];
+      await client.query(
+        'INSERT INTO employees (nama, unit, kota, kelompok_id) VALUES ($1, $2, $3, $4)',
+        [nama, unit, kota, assignments[i]]
+      );
+    }
 
-// Hitung distribusi
-const counts = {};
-for (let k = 1; k <= 10; k++) {
-  counts[k] = db.prepare('SELECT COUNT(*) as c FROM employees WHERE kelompok = ?').get(k).c;
+    await client.query('COMMIT');
+
+    // ── Tampilkan distribusi ───────────────────────────────────
+    const dist = await client.query(
+      'SELECT k.nama, COUNT(e.id) as total FROM kelompok k LEFT JOIN employees e ON e.kelompok_id = k.id GROUP BY k.id, k.nama ORDER BY k.id'
+    );
+    console.log('\n✅ Seeding selesai!');
+    console.log(`Total karyawan: ${total}`);
+    console.log('Distribusi kelompok:');
+    dist.rows.forEach(r => console.log(`  ${r.nama}: ${r.total} orang`));
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('❌ Error:', err.message);
+  } finally {
+    client.release();
+    await pool.end();
+  }
 }
-console.log('✅ Database seeded!');
-console.log(`Total karyawan: ${totalEmployees}`);
-console.log('Distribusi kelompok:', counts);
-db.close();
+
+seed();

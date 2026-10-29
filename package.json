@@ -5,17 +5,16 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "seed": "node seed-db.js",
-    "dev": "node --watch server.js",
-    "setup": "node seed-db.js && node server.js"
+    "seed": "node seed-db.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "better-sqlite3": "^11.9.1",
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "pg": "^8.13.1"
   }
 }
