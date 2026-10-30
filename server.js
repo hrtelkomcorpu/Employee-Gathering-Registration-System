@@ -127,6 +127,15 @@ app.post('/api/register', async (req, res) => {
       );
     }
 
+    // Ambil semua anggota sekelompoknya
+    const teammatesRes = await pool.query(
+      `SELECT id, nama, unit, kota, checked_in
+       FROM employees
+       WHERE kelompok_id = $1
+       ORDER BY nama`,
+      [emp.kelompok_id]
+    );
+
     res.json({
       success: true,
       already_registered: existing.rows.length > 0,
@@ -139,7 +148,8 @@ app.post('/api/register', async (req, res) => {
       kelompok: {
         id:   emp.kelompok_id,
         nama: emp.nama_kelompok,
-      }
+      },
+      teammates: teammatesRes.rows
     });
   } catch (e) {
     res.status(500).json({ error: e.message });

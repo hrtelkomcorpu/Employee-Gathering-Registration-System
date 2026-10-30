@@ -282,12 +282,112 @@
     .kelompok-box {
       background: linear-gradient(135deg, #1a73e8, #0052cc);
       border-radius: 16px;
-      padding: 22px 20px;
+      padding: 18px 16px;
       text-align: center;
-      margin: 16px 0 20px;
+      margin: 14px 0 16px;
     }
-    .kelompok-box .kl-label { font-size: 12px; color: rgba(255,255,255,.8); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-    .kelompok-box .kl-name  { font-size: 30px; font-weight: 900; color: #fff; letter-spacing: .5px; }
+    .kelompok-box .kl-label { font-size: 11px; color: rgba(255,255,255,.8); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .kelompok-box .kl-name  { font-size: 26px; font-weight: 900; color: #fff; letter-spacing: .5px; }
+
+    /* ─── Anggota Tim Box ─────────────────────────────────────── */
+    .teammates-section {
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+    .teammates-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .teammates-header h4 {
+      font-size: 13px;
+      font-weight: 800;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .teammates-count {
+      font-size: 11px;
+      font-weight: 700;
+      background: #e2e8f0;
+      color: #475569;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    .teammates-list {
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+    .teammate-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #edf2f7;
+      font-size: 13px;
+    }
+    .teammate-item.is-me {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+    .teammate-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .teammate-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-weight: 800;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .teammate-item.is-me .teammate-avatar {
+      background: #2563eb;
+      color: #fff;
+    }
+    .teammate-name {
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .teammate-you {
+      font-size: 10px;
+      font-weight: 800;
+      color: #2563eb;
+      background: #dbeafe;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-left: 4px;
+    }
+    .teammate-unit {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
 
     .btn-close-result {
       width: 100%;
@@ -413,7 +513,19 @@
         <div class="kl-label">🏆 Kelompok Anda</div>
         <div class="kl-name" id="res-kelompok">—</div>
       </div>
-      <button class="btn-close-result" id="close-result">Tutup</button>
+
+      <!-- Daftar Anggota Satu Kelompok -->
+      <div class="teammates-section">
+        <div class="teammates-header">
+          <h4>👥 Anggota Satu Kelompok</h4>
+          <span class="teammates-count" id="res-team-count">0 orang</span>
+        </div>
+        <div class="teammates-list" id="res-team-list">
+          <!-- Diisi via JS -->
+        </div>
+      </div>
+
+      <button class="btn-close-result" id="close-result">Selesai & Tutup</button>
     </div>
   </div>
 </div>
@@ -627,6 +739,32 @@
     document.getElementById('res-nama').textContent    = data.employee.nama;
     document.getElementById('res-unit').textContent    = `${data.employee.unit} · ${data.employee.kota}`;
     document.getElementById('res-kelompok').textContent = data.kelompok.nama;
+
+    // Render daftar anggota kelompok
+    const teamListEl  = document.getElementById('res-team-list');
+    const teamCountEl = document.getElementById('res-team-count');
+    const teammates   = data.teammates || [];
+
+    teamCountEl.textContent = `${teammates.length} orang`;
+    teamListEl.innerHTML    = '';
+
+    teammates.forEach(tm => {
+      const isMe = tm.id === data.employee.id;
+      const initial = tm.nama.charAt(0).toUpperCase();
+
+      const item = document.createElement('div');
+      item.className = 'teammate-item' + (isMe ? ' is-me' : '');
+      item.innerHTML = `
+        <div class="teammate-left">
+          <div class="teammate-avatar">${initial}</div>
+          <div class="teammate-name">
+            ${tm.nama} ${isMe ? '<span class="teammate-you">Anda</span>' : ''}
+          </div>
+        </div>
+        <div class="teammate-unit">${tm.unit}</div>
+      `;
+      teamListEl.appendChild(item);
+    });
 
     document.getElementById('result-panel').classList.add('show');
   }
