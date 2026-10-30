@@ -10,11 +10,9 @@ const app = express();
 // ─── Database Pool ────────────────────────────────────────────────────────────
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }
-    : false,
-  max: 10,
-  idleTimeoutMillis: 30000,
+  ssl: { rejectUnauthorized: false },
+  max: 2,
+  idleTimeoutMillis: 5000,
   connectionTimeoutMillis: 5000,
 });
 
@@ -160,17 +158,17 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/admin/kelompok', async (req, res) => {
   try {
     const kelompokRes = await pool.query('SELECT * FROM kelompok ORDER BY id');
-    const result = await Promise.all(
-      kelompokRes.rows.map(async (k) => {
-        const anggota = await pool.query(
-          `SELECT id, nama, unit, kota, checked_in,
-                  TO_CHAR(checked_in_at AT TIME ZONE 'Asia/Jakarta', 'DD/MM/YYYY HH24:MI') AS checked_in_at
-           FROM employees WHERE kelompok_id = $1 ORDER BY nama`,
-          [k.id]
-        );
-        return { ...k, anggota: anggota.rows };
-      })
+    const employeesRes = await pool.query(
+      `SELECT id, nama, unit, kota, kelompok_id, checked_in,
+              TO_CHAR(checked_in_at AT TIME ZONE 'Asia/Jakarta', 'DD/MM/YYYY HH24:MI') AS checked_in_at
+       FROM employees ORDER BY nama`
     );
+
+    const result = kelompokRes.rows.map(k => ({
+      ...k,
+      anggota: employeesRes.rows.filter(e => e.kelompok_id === k.id)
+    }));
+
     res.json(result);
   } catch (e) {
     res.status(500).json({ error: e.message });
