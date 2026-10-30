@@ -52,7 +52,7 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/employees', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, nama, unit, kota FROM employees ORDER BY unit, nama'
+      'SELECT id, nama, unit, kota, checked_in FROM employees ORDER BY unit, nama'
     );
     res.json(rows);
   } catch (e) {
@@ -108,22 +108,26 @@ app.post('/api/register', async (req, res) => {
 
     const emp = empResult.rows[0];
 
-    // Cek sudah registrasi
+    // Cek sudah registrasi (hanya boleh daftar 1 kali)
     const existing = await pool.query(
       'SELECT id FROM registrations WHERE employee_id = $1',
       [employee_id]
     );
 
-    if (existing.rows.length === 0) {
-      await pool.query(
-        'INSERT INTO registrations (employee_id) VALUES ($1)',
-        [employee_id]
-      );
-      await pool.query(
-        'UPDATE employees SET checked_in = TRUE, checked_in_at = NOW() WHERE id = $1',
-        [employee_id]
-      );
+    if (existing.rows.length > 0) {
+      return res.status(400).json({
+        error: 'Karyawan ini sudah terdaftar sebelumnya! Pendaftaran hanya dapat dilakukan satu kali.'
+      });
     }
+
+    await pool.query(
+      'INSERT INTO registrations (employee_id) VALUES ($1)',
+      [employee_id]
+    );
+    await pool.query(
+      'UPDATE employees SET checked_in = TRUE, checked_in_at = NOW() WHERE id = $1',
+      [employee_id]
+    );
 
     // Ambil semua anggota sekelompoknya
     const teammatesRes = await pool.query(
@@ -136,7 +140,7 @@ app.post('/api/register', async (req, res) => {
 
     res.json({
       success: true,
-      already_registered: existing.rows.length > 0,
+      already_registered: false,
       employee: {
         id:   emp.id,
         nama: emp.nama,

@@ -137,10 +137,32 @@
       border-bottom: 1px solid #f5f5f5;
       transition: background .15s;
       -webkit-tap-highlight-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .dropdown-item:last-child { border-bottom: none; }
     .dropdown-item:active,
     .dropdown-item:hover { background: #f0f7ff; color: #1a73e8; }
+
+    .dropdown-item.is-registered {
+      background: #fafafa;
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+    .dropdown-item.is-registered:hover {
+      background: #fafafa;
+      color: #94a3b8;
+    }
+    .badge-sudah-daftar {
+      font-size: 11px;
+      font-weight: 700;
+      color: #16a34a;
+      background: #dcfce7;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-left: 8px;
+    }
 
     .dropdown-empty {
       padding: 14px;
@@ -621,18 +643,29 @@
     } else {
       matches.slice(0, 50).forEach(emp => {
         const div = document.createElement('div');
-        div.className = 'dropdown-item';
-        // Highlight query
+        const isRegistered = Boolean(emp.checked_in);
+        div.className = 'dropdown-item' + (isRegistered ? ' is-registered' : '');
+
+        let nameHtml = emp.nama;
         if (query) {
           const idx = emp.nama.toLowerCase().indexOf(query);
-          div.innerHTML = emp.nama.substring(0, idx)
+          nameHtml = emp.nama.substring(0, idx)
             + `<strong>${emp.nama.substring(idx, idx + query.length)}</strong>`
             + emp.nama.substring(idx + query.length);
-        } else {
-          div.textContent = emp.nama;
         }
-        div.addEventListener('mousedown', e => { e.preventDefault(); selectEmployee(emp); });
-        div.addEventListener('touchend', e => { e.preventDefault(); selectEmployee(emp); });
+
+        if (isRegistered) {
+          div.innerHTML = `<span>${nameHtml}</span><span class="badge-sudah-daftar">Sudah Terdaftar ✓</span>`;
+          div.addEventListener('click', e => {
+            e.preventDefault();
+            showToast('⚠️ Karyawan ini sudah terdaftar sebelumnya.');
+          });
+        } else {
+          div.innerHTML = `<span>${nameHtml}</span>`;
+          div.addEventListener('mousedown', e => { e.preventDefault(); selectEmployee(emp); });
+          div.addEventListener('touchend', e => { e.preventDefault(); selectEmployee(emp); });
+        }
+
         namaDropdown.appendChild(div);
       });
     }
@@ -705,6 +738,10 @@
       const data = await res.json();
 
       if (data.success) {
+        // Tandai karyawan ini sudah terdaftar di state lokal
+        const registered = allEmployees.find(e => e.id === selectedEmpId);
+        if (registered) registered.checked_in = true;
+
         showResult(data);
         resetForm();
       } else {
