@@ -23,6 +23,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Explicit page routes (agar aman di Vercel serverless)
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+app.get('/qrcode', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'qrcode.html'));
+});
+
+app.get('/qrcode.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'qrcode.html'));
+});
+
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', async (req, res) => {
   try {
