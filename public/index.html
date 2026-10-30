@@ -229,37 +229,25 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ─── Result Overlay ─────────────────────────────────────── */
+    /* ─── Result Sheet ─────────────────────────────────────────── */
     #result-panel {
       display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.65);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      z-index: 999;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 0;
+      width: 100%;
+      max-width: 440px;
     }
-    #result-panel.show { display: flex; }
-
-    @media (min-width: 480px) {
-      #result-panel { align-items: center; padding: 20px; }
-      .result-card { border-radius: 24px !important; }
-    }
+    #result-panel.show { display: block; }
 
     .result-card {
       background: #fff;
-      border-radius: 24px 24px 0 0;
+      border-radius: 24px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.4);
       width: 100%;
-      max-width: 440px;
       overflow: hidden;
-      animation: slideUp .4s cubic-bezier(.34,1.3,.64,1);
+      animation: fadeIn .4s ease-out;
     }
-    @keyframes slideUp {
-      from { transform: translateY(100%); opacity: 0; }
-      to   { transform: translateY(0);    opacity: 1; }
+    @keyframes fadeIn {
+      from { transform: scale(0.95); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
     }
 
     .result-header {
@@ -411,20 +399,17 @@
       flex-shrink: 0;
     }
 
-    .btn-close-result {
-      width: 100%;
-      padding: 13px;
-      background: #f0f0f0;
-      border: none;
+    .registration-done-note {
+      background: #f0fdf4;
+      border: 1px dashed #86efac;
+      color: #15803d;
+      padding: 12px 14px;
       border-radius: 12px;
-      font-size: 15px;
-      font-weight: 700;
-      color: #444;
-      cursor: pointer;
-      transition: background .2s;
-      -webkit-tap-highlight-color: transparent;
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: center;
+      font-weight: 600;
     }
-    .btn-close-result:active { background: #e0e0e0; }
 
     /* ─── Toast ──────────────────────────────────────────────── */
     .toast {
@@ -456,7 +441,7 @@
 </head>
 <body>
 
-<div class="card">
+<div class="card" id="form-card">
   <div class="card-header">
     <img src="/logo.png" alt="Telkom CorpU" class="logo-img" />
     <h1>Gathering Karyawan 2026</h1>
@@ -547,7 +532,9 @@
         </div>
       </div>
 
-      <button class="btn-close-result" id="close-result">Selesai & Tutup</button>
+      <div class="registration-done-note">
+        ✅ Registrasi Anda telah tercatat. Silakan screenshot halaman ini sebagai bukti kelompok Anda.
+      </div>
     </div>
   </div>
 </div>
@@ -562,6 +549,18 @@
 
   // ─── Init ─────────────────────────────────────────────────────────────────────
   async function init() {
+    // Cek apakah browser HP ini sudah pernah mendaftar sebelumnya
+    const savedData = localStorage.getItem('gathering_registration');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        showResult(parsed);
+        return; // Jangan load form, langsung kunci ke tampilan hasil kelompok
+      } catch (e) {
+        localStorage.removeItem('gathering_registration');
+      }
+    }
+
     try {
       const res = await fetch('/api/employees');
       allEmployees = await res.json();
@@ -738,12 +737,11 @@
       const data = await res.json();
 
       if (data.success) {
-        // Tandai karyawan ini sudah terdaftar di state lokal
-        const registered = allEmployees.find(e => e.id === selectedEmpId);
-        if (registered) registered.checked_in = true;
+        // Simpan data pendaftaran ke perangkat (localStorage)
+        localStorage.setItem('gathering_registration', JSON.stringify(data));
 
+        // Tampilkan hasil dan sembunyikan form selamanya
         showResult(data);
-        resetForm();
       } else {
         showToast('❌ ' + (data.error || 'Terjadi kesalahan'));
       }
@@ -763,15 +761,16 @@
 
   // ─── Result Sheet ─────────────────────────────────────────────────────────────
   function showResult(data) {
-    const isNew = !data.already_registered;
-    const header = document.getElementById('result-header');
-    header.className = 'result-header ' + (isNew ? 'success' : 'warning');
+    // Sembunyikan form card sepenuhnya agar user tidak bisa daftar ulang
+    const formCard = document.getElementById('form-card');
+    if (formCard) formCard.style.display = 'none';
 
-    document.getElementById('result-emoji').textContent    = isNew ? '🎉' : '✅';
-    document.getElementById('result-title').textContent    = isNew ? 'Registrasi Berhasil!' : 'Sudah Terdaftar!';
-    document.getElementById('result-subtitle').textContent = isNew
-      ? 'Selamat datang di Gathering 2026! 🙌'
-      : 'Anda sudah terdaftar sebelumnya';
+    const header = document.getElementById('result-header');
+    header.className = 'result-header success';
+
+    document.getElementById('result-emoji').textContent    = '🎉';
+    document.getElementById('result-title').textContent    = 'Registrasi Berhasil!';
+    document.getElementById('result-subtitle').textContent = 'Selamat datang di Gathering 2026! 🙌';
 
     document.getElementById('res-nama').textContent    = data.employee.nama;
     document.getElementById('res-unit').textContent    = `${data.employee.unit} · ${data.employee.kota}`;
@@ -805,14 +804,6 @@
 
     document.getElementById('result-panel').classList.add('show');
   }
-
-  document.getElementById('close-result').addEventListener('click', () => {
-    document.getElementById('result-panel').classList.remove('show');
-  });
-  document.getElementById('result-panel').addEventListener('click', e => {
-    if (e.target === document.getElementById('result-panel'))
-      document.getElementById('result-panel').classList.remove('show');
-  });
 
   // ─── Toast ────────────────────────────────────────────────────────────────────
   let toastTimer;
