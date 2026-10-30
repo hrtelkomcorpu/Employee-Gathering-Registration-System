@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/png" href="/logo.png" />
   <title>QR Code — Meja Pendaftaran</title>
   <!-- QR Code library (via CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -79,6 +80,13 @@
       box-shadow: 0 4px 20px rgba(0,0,0,.1);
       text-align: center;
       margin-bottom: 20px;
+    }
+    .print-card .logo-top {
+      max-width: 160px;
+      height: auto;
+      margin: 0 auto 16px;
+      display: block;
+      object-fit: contain;
     }
     .print-card .event-badge {
       display: inline-block;
@@ -180,6 +188,7 @@
   <!-- QR Output -->
   <div class="qr-area" id="qr-area">
     <div class="print-card" id="print-card">
+      <img src="/logo.png" alt="Telkom CorpU" class="logo-top" />
       <div class="event-badge">GATHERING KARYAWAN 2026</div>
       <h2>Daftar Kelompok Anda</h2>
       <p class="tagline">Scan QR Code di bawah untuk mendaftar</p>

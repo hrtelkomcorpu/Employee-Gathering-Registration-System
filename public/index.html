@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <link rel="icon" type="image/png" href="/logo.png" />
   <title>Registrasi Gathering Karyawan 2026</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,14 +30,20 @@
     }
 
     .card-header {
-      background: linear-gradient(135deg, #1a73e8, #0052cc);
-      padding: 28px 24px 22px;
+      background: #ffffff;
+      padding: 24px 20px 18px;
       text-align: center;
-      color: #fff;
+      border-bottom: 1px solid #edf2f7;
     }
-    .card-header .logo { font-size: 44px; margin-bottom: 6px; }
-    .card-header h1 { font-size: 20px; font-weight: 700; }
-    .card-header p  { margin-top: 5px; font-size: 13px; opacity: .85; }
+    .card-header .logo-img {
+      max-width: 180px;
+      height: auto;
+      display: block;
+      margin: 0 auto 10px;
+      object-fit: contain;
+    }
+    .card-header h1 { font-size: 19px; font-weight: 800; color: #1a202c; }
+    .card-header p  { margin-top: 4px; font-size: 13px; color: #718096; }
 
     .card-body { padding: 24px 20px 28px; }
 
@@ -329,7 +336,7 @@
 
 <div class="card">
   <div class="card-header">
-    <div class="logo">🎉</div>
+    <img src="/logo.png" alt="Telkom CorpU" class="logo-img" />
     <h1>Gathering Karyawan 2026</h1>
     <p>Pilih unit dan nama Anda untuk mendaftar</p>
   </div>
