@@ -436,17 +436,16 @@
     const seen = new Set();
     const opts = [];
     allEmployees.forEach(e => {
-      const key = `${e.unit}|${e.kota}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        opts.push({ unit: e.unit, kota: e.kota, label: `${e.unit} ${e.kota}` });
+      if (!seen.has(e.unit)) {
+        seen.add(e.unit);
+        opts.push(e.unit);
       }
     });
-    opts.sort((a, b) => a.label.localeCompare(b.label));
-    opts.forEach(o => {
+    opts.sort((a, b) => a.localeCompare(b));
+    opts.forEach(unit => {
       const el = document.createElement('option');
-      el.value = JSON.stringify({ unit: o.unit, kota: o.kota });
-      el.textContent = o.label;
+      el.value = unit;
+      el.textContent = unit;
       sel.appendChild(el);
     });
   }
@@ -462,8 +461,8 @@
       return;
     }
 
-    const { unit, kota } = JSON.parse(this.value);
-    filteredList = allEmployees.filter(e => e.unit === unit && e.kota === kota);
+    const unit = this.value;
+    filteredList = allEmployees.filter(e => e.unit === unit);
     namaInput.disabled = false;
     namaInput.value = '';
     namaInput.focus();

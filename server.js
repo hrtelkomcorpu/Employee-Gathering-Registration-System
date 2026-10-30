@@ -66,9 +66,9 @@ app.get('/api/employees', async (req, res) => {
 app.get('/api/units', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT DISTINCT unit, kota FROM employees ORDER BY unit, kota'
+      'SELECT DISTINCT unit FROM employees ORDER BY unit'
     );
-    res.json(rows);
+    res.json(rows.map(r => r.unit));
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -76,12 +76,12 @@ app.get('/api/units', async (req, res) => {
 
 // ─── GET /api/employees/by-unit ───────────────────────────────────────────────
 app.get('/api/employees/by-unit', async (req, res) => {
-  const { unit, kota } = req.query;
-  if (!unit || !kota) return res.json([]);
+  const { unit } = req.query;
+  if (!unit) return res.json([]);
   try {
     const { rows } = await pool.query(
-      'SELECT id, nama FROM employees WHERE unit = $1 AND kota = $2 ORDER BY nama',
-      [unit, kota]
+      'SELECT id, nama FROM employees WHERE unit = $1 ORDER BY nama',
+      [unit]
     );
     res.json(rows);
   } catch (e) {
